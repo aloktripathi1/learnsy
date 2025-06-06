@@ -79,8 +79,7 @@ The app is fully deployable on [Vercel](https://vercel.com), with environment va
 
 ## 👤 Author
 
-Made by **Alok Tripathi**  
-[GitHub Profile](https://github.com/aloktripathi1)
+Made by **Alok Tripathi** 
 
 ---
 
