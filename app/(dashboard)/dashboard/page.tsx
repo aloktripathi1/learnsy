@@ -168,103 +168,103 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 space-y-4 p-3 md:p-8 pb-20 md:pb-8">
-      {/* Welcome Section - Mobile Optimized */}
+      {/* Welcome Section - Enhanced */}
       <div className="space-y-1">
-        <h1 className="text-xl md:text-3xl lg:text-4xl font-bold tracking-tight">
+        <h1 className="text-xl md:text-3xl lg:text-4xl font-bold tracking-tight enhanced-heading">
           Welcome back, {user?.user_metadata?.full_name?.split(" ")[0] || "Learner"}! 👋
         </h1>
-        <p className="text-muted-foreground text-sm">Ready to continue your learning journey?</p>
+        <p className="text-muted-foreground text-sm enhanced-text">Ready to continue your learning journey?</p>
       </div>
 
       {/* Configuration Alerts */}
       {!hasSupabase && (
-        <Alert className="mx-0">
+        <Alert className="mx-0 enhanced-card">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
+          <AlertDescription className="text-sm enhanced-text">
             <strong>Supabase not configured:</strong> Data persistence is disabled.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Stats Cards - Mobile First Grid */}
+      {/* Stats Cards - Enhanced */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Card className="p-3 md:p-4">
+        <Card className="enhanced-stats-card">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs md:text-sm font-medium text-muted-foreground">Videos</div>
             <Play className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </div>
-          <div className="text-xl md:text-2xl font-bold">{stats.watchedVideos}</div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <div className="text-xl md:text-2xl font-bold enhanced-heading">{stats.watchedVideos}</div>
+          <p className="text-xs text-muted-foreground mt-1 enhanced-text">
             <TrendingUp className="inline h-2 w-2 md:h-3 md:w-3 mr-1" />
             Watched
           </p>
         </Card>
 
-        <Card className="p-3 md:p-4">
+        <Card className="enhanced-stats-card">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs md:text-sm font-medium text-muted-foreground">Streak</div>
             <Calendar className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </div>
-          <div className="text-xl md:text-2xl font-bold">{stats.activeStreak}</div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <div className="text-xl md:text-2xl font-bold enhanced-heading">{stats.activeStreak}</div>
+          <p className="text-xs text-muted-foreground mt-1 enhanced-text">
             <Target className="inline h-2 w-2 md:h-3 md:w-3 mr-1" />
             {stats.activeStreak > 0 ? "days" : "Start today!"}
           </p>
         </Card>
 
-        <Card className="p-3 md:p-4">
+        <Card className="enhanced-stats-card">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs md:text-sm font-medium text-muted-foreground">Courses</div>
             <BookOpen className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </div>
-          <div className="text-xl md:text-2xl font-bold">{stats.totalCourses}</div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <div className="text-xl md:text-2xl font-bold enhanced-heading">{stats.totalCourses}</div>
+          <p className="text-xs text-muted-foreground mt-1 enhanced-text">
             <Clock className="inline h-2 w-2 md:h-3 md:w-3 mr-1" />
             Total
           </p>
         </Card>
 
-        <Card className="p-3 md:p-4">
+        <Card className="enhanced-stats-card">
           <div className="flex items-center justify-between mb-2">
             <div className="text-xs md:text-sm font-medium text-muted-foreground">Saved</div>
             <Bookmark className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
           </div>
-          <div className="text-xl md:text-2xl font-bold">{stats.bookmarkedVideos}</div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <div className="text-xl md:text-2xl font-bold enhanced-heading">{stats.bookmarkedVideos}</div>
+          <p className="text-xs text-muted-foreground mt-1 enhanced-text">
             <Bookmark className="inline h-2 w-2 md:h-3 md:w-3 mr-1" />
             Bookmarks
           </p>
         </Card>
       </div>
 
-      {/* Streak Calendar - Mobile Optimized */}
-      <Card>
+      {/* Streak Calendar - Enhanced */}
+      <Card className="enhanced-card">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg md:text-xl">Learning Activity</CardTitle>
-          <CardDescription className="text-sm">Your daily learning streak</CardDescription>
+          <CardTitle className="text-lg md:text-xl enhanced-heading">Learning Activity</CardTitle>
+          <CardDescription className="text-sm enhanced-text">Your daily learning streak</CardDescription>
         </CardHeader>
         <CardContent className="px-3 md:px-6">
           <StreakCalendar />
         </CardContent>
       </Card>
 
-      {/* Import Playlist - Mobile First */}
-      <Card>
+      {/* Import Playlist - Enhanced */}
+      <Card className="enhanced-card">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
-              <CardTitle className="text-lg md:text-xl">Import Course</CardTitle>
-              <CardDescription className="text-sm mt-1">Add a YouTube playlist</CardDescription>
+              <CardTitle className="text-lg md:text-xl enhanced-heading">Import Course</CardTitle>
+              <CardDescription className="text-sm mt-1 enhanced-text">Add a YouTube playlist</CardDescription>
             </div>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 enhanced-button">
                     <HelpCircle className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  <p className="text-sm">
+                  <p className="text-sm enhanced-text">
                     Paste a YouTube playlist URL here. Example:
                     https://www.youtube.com/playlist?list=PLillGF-RfqbY3c2r0htQyVbDJJoBFE6Rb
                   </p>
@@ -279,13 +279,13 @@ export default function DashboardPage() {
               placeholder="Paste YouTube playlist URL..."
               value={playlistUrl}
               onChange={(e) => setPlaylistUrl(e.target.value)}
-              className="text-base h-12"
+              className="text-base h-12 enhanced-input"
               disabled={!hasSupabase}
             />
             <Button
               onClick={importPlaylist}
               disabled={isImporting || !playlistUrl.trim() || !hasSupabase}
-              className="w-full h-12 text-base"
+              className="w-full h-12 text-base enhanced-button"
             >
               {isImporting ? (
                 <div className="flex items-center gap-2">
@@ -303,50 +303,56 @@ export default function DashboardPage() {
 
           {/* Show import success */}
           {importSuccess && (
-            <Alert>
+            <Alert className="enhanced-card">
               <CheckCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">{importSuccess}</AlertDescription>
+              <AlertDescription className="text-sm enhanced-text">{importSuccess}</AlertDescription>
             </Alert>
           )}
 
           {/* Show import error */}
           {importError && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="enhanced-card">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle className="text-sm">Import Failed</AlertTitle>
-              <AlertDescription className="text-sm">{importError}</AlertDescription>
+              <AlertTitle className="text-sm enhanced-heading">Import Failed</AlertTitle>
+              <AlertDescription className="text-sm enhanced-text">{importError}</AlertDescription>
             </Alert>
           )}
 
           {/* Example URL */}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground enhanced-text">
             Example: youtube.com/playlist?list=PLillGF-RfqbY3c2r0htQyVbDJJoBFE6Rb
           </p>
         </CardContent>
       </Card>
 
-      {/* Recent Courses - Mobile Optimized */}
+      {/* Recent Courses - Enhanced */}
       {courses.length > 0 && (
-        <Card>
+        <Card className="enhanced-card">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg md:text-xl">Your Courses</CardTitle>
-            <CardDescription className="text-sm">Continue where you left off</CardDescription>
+            <CardTitle className="text-lg md:text-xl enhanced-heading">Your Courses</CardTitle>
+            <CardDescription className="text-sm enhanced-text">Continue where you left off</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {courses.slice(0, 3).map((course) => (
-              <div key={course.id} className="flex gap-3 p-3 border rounded-lg bg-card">
+              <div key={course.id} className="flex gap-3 p-3 border rounded-lg bg-card enhanced-card">
                 <img
                   src={course.thumbnail || "/placeholder.svg?height=48&width=80"}
                   alt={course.title}
                   className="w-16 h-12 md:w-20 md:h-14 object-cover rounded flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0 space-y-2">
-                  <h3 className="font-medium text-sm md:text-base line-clamp-2 leading-tight">{course.title}</h3>
+                  <h3 className="font-medium text-sm md:text-base line-clamp-2 leading-tight enhanced-text">
+                    {course.title}
+                  </h3>
                   <div className="space-y-1">
-                    <Progress value={0} className="h-1.5 md:h-2" />
+                    <Progress value={0} className="h-1.5 md:h-2 enhanced-progress" />
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">0% complete</span>
-                      <Button onClick={() => resumeCourse(course)} size="sm" className="h-8 px-3 text-xs">
+                      <span className="text-xs text-muted-foreground enhanced-text">0% complete</span>
+                      <Button
+                        onClick={() => resumeCourse(course)}
+                        size="sm"
+                        className="h-8 px-3 text-xs enhanced-button"
+                      >
                         Start
                       </Button>
                     </div>

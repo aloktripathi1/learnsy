@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { YouTubePlayer } from "@/components/youtube-player"
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import {
   FileText,
   Award,
   List,
+  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/components/auth-provider"
@@ -43,6 +45,8 @@ export default function StudyPage() {
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0)
+  const [autoCompleted, setAutoCompleted] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -128,6 +132,8 @@ export default function StudyPage() {
         setCurrentIndex(videoIndex)
         setCurrentVideo(videosWithProgress[videoIndex])
         setNotes(videosWithProgress[videoIndex].notes || "")
+        setAutoCompleted(false)
+        setVideoProgress(0)
       }
     } catch (error) {
       console.error("Error loading study data:", error)
@@ -156,10 +162,14 @@ export default function StudyPage() {
     }
   }
 
-  const markComplete = async () => {
+  const markComplete = async (isAutomatic = false) => {
     if (!user || !currentVideo || currentVideo.completed) return
 
     await updateVideoProgress({ completed: true, completed_at: new Date().toISOString() })
+
+    if (isAutomatic) {
+      setAutoCompleted(true)
+    }
 
     // Update streak
     const today = new Date().toISOString().split("T")[0]
@@ -171,6 +181,16 @@ export default function StudyPage() {
       setShowCertificate(true)
     }
   }
+
+  const handleVideoProgress = useCallback((progress: number) => {
+    setVideoProgress(progress)
+  }, [])
+
+  const handleVideoComplete = useCallback(() => {
+    if (!currentVideo?.completed) {
+      markComplete(true)
+    }
+  }, [currentVideo?.completed])
 
   const toggleBookmark = async () => {
     if (!currentVideo) return
@@ -211,7 +231,7 @@ export default function StudyPage() {
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="text-center">
           <h2 className="responsive-title font-semibold mb-2">Video not found</h2>
-          <Button onClick={() => router.push("/courses")} className="touch-target">
+          <Button onClick={() => router.push("/courses")} className="touch-target enhanced-button">
             Back to Courses
           </Button>
         </div>
@@ -222,30 +242,35 @@ export default function StudyPage() {
   const completedCount = videos.filter((v) => v.completed).length
   const progressPercent = (completedCount / videos.length) * 100
 
-  // Mobile Layout - Completely Optimized
+  // Mobile Layout - Enhanced
   if (isMobile) {
     return (
       <div className="flex flex-col h-screen bg-background">
-        {/* Mobile Header - Compact */}
-        <div className="flex items-center justify-between p-2 border-b bg-background/95 backdrop-blur">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/courses")} className="h-10 w-10">
+        {/* Mobile Header - Enhanced */}
+        <div className="flex items-center justify-between p-3 border-b bg-background/95 backdrop-blur-md enhanced-nav">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/courses")}
+            className="h-10 w-10 enhanced-button"
+          >
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 text-center px-2">
-            <h1 className="font-semibold text-sm truncate">{course.title}</h1>
+            <h1 className="font-semibold text-sm truncate enhanced-heading">{course.title}</h1>
             <p className="text-xs text-muted-foreground">
               {currentIndex + 1} of {videos.length}
             </p>
           </div>
           <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Button variant="ghost" size="icon" className="h-10 w-10 enhanced-button">
                 <List className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:w-96 p-0">
+            <SheetContent side="right" className="w-full sm:w-96 p-0 enhanced-card">
               <div className="p-4 border-b">
-                <SheetTitle className="text-lg">Course Content</SheetTitle>
+                <SheetTitle className="text-lg enhanced-heading">Course Content</SheetTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   {completedCount} of {videos.length} completed
                 </p>
@@ -255,8 +280,10 @@ export default function StudyPage() {
                   <div
                     key={video.id}
                     className={cn(
-                      "p-3 rounded-lg border cursor-pointer transition-colors",
-                      video.video_id === currentVideo.video_id ? "bg-primary/10 border-primary" : "hover:bg-muted",
+                      "p-3 rounded-lg border cursor-pointer transition-all duration-200 enhanced-card",
+                      video.video_id === currentVideo.video_id
+                        ? "bg-primary/10 border-primary shadow-md"
+                        : "hover:bg-muted/50",
                       video.completed && "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800",
                     )}
                     onClick={() => jumpToVideo(video.video_id)}
@@ -270,7 +297,7 @@ export default function StudyPage() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium line-clamp-2">{video.title}</div>
+                        <div className="text-sm font-medium line-clamp-2 enhanced-text">{video.title}</div>
                         <div className="text-xs text-muted-foreground mt-1">{video.duration}</div>
                       </div>
                       {video.bookmarked && <Bookmark className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
@@ -282,43 +309,67 @@ export default function StudyPage() {
           </Sheet>
         </div>
 
-        {/* Video Player - Optimized for Mobile */}
-        <div className="relative bg-black">
-          <div className="youtube-container mx-2 mt-2">
-            <iframe
-              src={`https://www.youtube.com/embed/${currentVideo.video_id}?rel=0&modestbranding=1&iv_load_policy=3`}
-              title={currentVideo.title}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="rounded-lg"
-            />
-          </div>
+        {/* Video Player - Enhanced */}
+        <div className="relative bg-black p-2">
+          <YouTubePlayer
+            videoId={currentVideo.video_id}
+            onProgress={handleVideoProgress}
+            onComplete={handleVideoComplete}
+            className="rounded-lg"
+          />
         </div>
 
-        {/* Content Area - Scrollable */}
+        {/* Content Area - Enhanced */}
         <div className="flex-1 overflow-auto">
-          {/* Video Info - Compact */}
-          <div className="p-3 border-b">
-            <h1 className="text-base md:text-lg font-bold mb-2 line-clamp-2 leading-tight">{currentVideo.title}</h1>
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+          {/* Video Info - Enhanced */}
+          <div className="p-4 border-b">
+            <h1 className="text-base md:text-lg font-bold mb-3 line-clamp-2 leading-tight enhanced-heading">
+              {currentVideo.title}
+            </h1>
+            <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {currentVideo.duration}
               </span>
               <span>{Math.round(progressPercent)}% complete</span>
             </div>
-            <Progress value={progressPercent} className="mt-2 h-1.5" />
+            <div className="space-y-2">
+              <Progress value={progressPercent} className="h-2 enhanced-progress" />
+              {videoProgress > 0 && (
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Video progress: {Math.round(videoProgress)}%</span>
+                  {videoProgress >= 90 && !currentVideo.completed && (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <Zap className="h-3 w-3" />
+                      Auto-complete ready
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Action Buttons - Mobile Optimized */}
-          <div className="p-3 space-y-3">
+          {/* Auto-completion notification */}
+          {autoCompleted && (
+            <div className="mx-4 mt-3 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800 fade-in">
+              <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                <Zap className="h-4 w-4" />
+                Video automatically marked as complete!
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons - Enhanced */}
+          <div className="p-4 space-y-3">
             {/* Primary Actions */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <Button
-                onClick={markComplete}
+                onClick={() => markComplete(false)}
                 disabled={currentVideo.completed}
-                className={cn("h-12 text-sm font-medium", currentVideo.completed && "bg-green-600 hover:bg-green-700")}
+                className={cn(
+                  "h-12 text-sm font-medium enhanced-button",
+                  currentVideo.completed && "bg-green-600 hover:bg-green-700",
+                )}
               >
                 {currentVideo.completed ? (
                   <>
@@ -337,7 +388,7 @@ export default function StudyPage() {
                 variant="outline"
                 onClick={toggleBookmark}
                 className={cn(
-                  "h-12 text-sm font-medium",
+                  "h-12 text-sm font-medium enhanced-button",
                   currentVideo.bookmarked &&
                     "bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400",
                 )}
@@ -352,12 +403,12 @@ export default function StudyPage() {
             </div>
 
             {/* Navigation */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
                 onClick={() => navigateVideo("prev")}
                 disabled={currentIndex === 0}
-                className="h-10 text-sm"
+                className="h-10 text-sm enhanced-button"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
@@ -367,45 +418,45 @@ export default function StudyPage() {
                 variant="outline"
                 onClick={() => navigateVideo("next")}
                 disabled={currentIndex === videos.length - 1}
-                className="h-10 text-sm"
+                className="h-10 text-sm enhanced-button"
               >
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
 
-            {/* Notes Section - Collapsible */}
+            {/* Notes Section - Enhanced */}
             <div className="space-y-3 pt-2 border-t">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
-                <h3 className="font-medium text-sm">Notes</h3>
+                <h3 className="font-medium text-sm enhanced-heading">Notes</h3>
               </div>
               <Textarea
                 placeholder="Add your notes for this video..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[80px] text-sm resize-none"
+                className="min-h-[80px] text-sm resize-none enhanced-input"
               />
-              <Button onClick={saveNotes} variant="outline" className="w-full h-10 text-sm">
+              <Button onClick={saveNotes} variant="outline" className="w-full h-10 text-sm enhanced-button">
                 Save Notes
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Certificate Modal - Mobile Optimized */}
+        {/* Certificate Modal - Enhanced */}
         {showCertificate && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-sm">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-sm enhanced-card">
               <CardHeader className="text-center pb-4">
                 <Award className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
-                <CardTitle className="text-lg">Congratulations! 🎉</CardTitle>
+                <CardTitle className="text-lg enhanced-heading">Congratulations! 🎉</CardTitle>
               </CardHeader>
               <CardContent className="text-center space-y-3 pt-0">
-                <p className="text-sm">You've successfully completed</p>
-                <p className="font-semibold">{course.title}</p>
+                <p className="text-sm enhanced-text">You've successfully completed</p>
+                <p className="font-semibold enhanced-heading">{course.title}</p>
                 <p className="text-xs text-muted-foreground">You watched all {videos.length} videos in this course!</p>
-                <Button onClick={() => setShowCertificate(false)} className="w-full h-10">
+                <Button onClick={() => setShowCertificate(false)} className="w-full h-10 enhanced-button">
                   Continue Learning
                 </Button>
               </CardContent>
@@ -416,26 +467,24 @@ export default function StudyPage() {
     )
   }
 
-  // Desktop Layout (existing layout)
+  // Desktop Layout - Enhanced (existing layout with enhancements)
   return (
     <div className="flex h-screen">
       {/* Main Video Area */}
       <div className="flex-1 flex flex-col p-6">
         {/* Video Player */}
-        <div className="youtube-container mb-6">
-          <iframe
-            src={`https://www.youtube.com/embed/${currentVideo.video_id}?rel=0&modestbranding=1&iv_load_policy=3`}
-            title={currentVideo.title}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
+        <div className="mb-6">
+          <YouTubePlayer
+            videoId={currentVideo.video_id}
+            onProgress={handleVideoProgress}
+            onComplete={handleVideoComplete}
           />
         </div>
 
-        {/* Video Info */}
+        {/* Video Info - Enhanced */}
         <div className="space-y-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold mb-2">{currentVideo.title}</h1>
+            <h1 className="text-2xl font-bold mb-2 enhanced-heading">{currentVideo.title}</h1>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
@@ -447,23 +496,51 @@ export default function StudyPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Progress value={progressPercent} className="flex-1" />
-            <span className="text-sm font-medium">{Math.round(progressPercent)}% Complete</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Progress value={progressPercent} className="flex-1 enhanced-progress" />
+              <span className="text-sm font-medium">{Math.round(progressPercent)}% Complete</span>
+            </div>
+            {videoProgress > 0 && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>Video progress: {Math.round(videoProgress)}%</span>
+                {videoProgress >= 90 && !currentVideo.completed && (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <Zap className="h-4 w-4" />
+                    Auto-complete ready
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Auto-completion notification */}
+        {autoCompleted && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/20 dark:border-green-800 fade-in">
+            <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+              <Zap className="h-4 w-4" />
+              Video automatically marked as complete!
+            </div>
+          </div>
+        )}
+
+        {/* Controls - Enhanced */}
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigateVideo("prev")} disabled={currentIndex === 0}>
+          <Button
+            variant="outline"
+            onClick={() => navigateVideo("prev")}
+            disabled={currentIndex === 0}
+            className="enhanced-button"
+          >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Previous
           </Button>
 
           <Button
-            onClick={markComplete}
+            onClick={() => markComplete(false)}
             disabled={currentVideo.completed}
-            className={cn(currentVideo.completed && "bg-green-600 hover:bg-green-700")}
+            className={cn("enhanced-button", currentVideo.completed && "bg-green-600 hover:bg-green-700")}
           >
             {currentVideo.completed ? (
               <>
@@ -482,6 +559,7 @@ export default function StudyPage() {
             variant="outline"
             onClick={toggleBookmark}
             className={cn(
+              "enhanced-button",
               currentVideo.bookmarked &&
                 "bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400",
             )}
@@ -494,34 +572,41 @@ export default function StudyPage() {
             {currentVideo.bookmarked ? "Bookmarked" : "Bookmark"}
           </Button>
 
-          <Button variant="outline" onClick={() => navigateVideo("next")} disabled={currentIndex === videos.length - 1}>
+          <Button
+            variant="outline"
+            onClick={() => navigateVideo("next")}
+            disabled={currentIndex === videos.length - 1}
+            className="enhanced-button"
+          >
             Next
             <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
       </div>
 
-      {/* Right Sidebar - Desktop Only */}
-      <div className="w-96 border-l bg-muted/30 flex flex-col">
+      {/* Right Sidebar - Enhanced */}
+      <div className="w-96 border-l bg-muted/30 flex flex-col enhanced-sidebar">
         {/* Course Progress */}
         <div className="p-4 border-b">
-          <h2 className="font-semibold mb-2">{course.title}</h2>
+          <h2 className="font-semibold mb-2 enhanced-heading">{course.title}</h2>
           <div className="text-sm text-muted-foreground mb-2">
             {completedCount} of {videos.length} videos completed
           </div>
-          <Progress value={progressPercent} />
+          <Progress value={progressPercent} className="enhanced-progress" />
         </div>
 
         {/* Video List */}
         <div className="flex-1 overflow-auto p-4">
-          <h3 className="font-medium mb-3">Course Content</h3>
+          <h3 className="font-medium mb-3 enhanced-heading">Course Content</h3>
           <div className="space-y-2">
             {videos.map((video, index) => (
               <div
                 key={video.id}
                 className={cn(
-                  "p-3 rounded-lg border cursor-pointer transition-colors",
-                  video.video_id === currentVideo.video_id ? "bg-primary/10 border-primary" : "hover:bg-muted",
+                  "p-3 rounded-lg border cursor-pointer transition-all duration-200 enhanced-card",
+                  video.video_id === currentVideo.video_id
+                    ? "bg-primary/10 border-primary shadow-md"
+                    : "hover:bg-muted/50",
                   video.completed && "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800",
                 )}
                 onClick={() => jumpToVideo(video.video_id)}
@@ -535,7 +620,7 @@ export default function StudyPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium line-clamp-2">{video.title}</div>
+                    <div className="text-sm font-medium line-clamp-2 enhanced-text">{video.title}</div>
                     <div className="text-xs text-muted-foreground mt-1">{video.duration}</div>
                   </div>
                   {video.bookmarked && <Bookmark className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
@@ -545,37 +630,37 @@ export default function StudyPage() {
           </div>
         </div>
 
-        {/* Notes Section */}
+        {/* Notes Section - Enhanced */}
         <div className="p-4 border-t">
           <div className="flex items-center gap-2 mb-3">
             <FileText className="h-4 w-4" />
-            <h3 className="font-medium">Notes</h3>
+            <h3 className="font-medium enhanced-heading">Notes</h3>
           </div>
           <Textarea
             placeholder="Add your notes for this video..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="mb-3 min-h-[100px]"
+            className="mb-3 min-h-[100px] enhanced-input"
           />
-          <Button onClick={saveNotes} size="sm" className="w-full">
+          <Button onClick={saveNotes} size="sm" className="w-full enhanced-button">
             Save Notes
           </Button>
         </div>
       </div>
 
-      {/* Certificate Modal */}
+      {/* Certificate Modal - Enhanced */}
       {showCertificate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <Card className="max-w-md mx-4 enhanced-card">
             <CardHeader className="text-center">
               <Award className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-              <CardTitle>Congratulations! 🎉</CardTitle>
+              <CardTitle className="enhanced-heading">Congratulations! 🎉</CardTitle>
             </CardHeader>
             <CardContent className="text-center space-y-4">
-              <p>You've successfully completed</p>
-              <p className="font-semibold text-lg">{course.title}</p>
+              <p className="enhanced-text">You've successfully completed</p>
+              <p className="font-semibold text-lg enhanced-heading">{course.title}</p>
               <p className="text-sm text-muted-foreground">You watched all {videos.length} videos in this course!</p>
-              <Button onClick={() => setShowCertificate(false)} className="w-full">
+              <Button onClick={() => setShowCertificate(false)} className="w-full enhanced-button">
                 Continue Learning
               </Button>
             </CardContent>
