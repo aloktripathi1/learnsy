@@ -86,4 +86,3 @@ Made by **Alok Tripathi**
 ## 📄 License
 
 MIT License
-```
