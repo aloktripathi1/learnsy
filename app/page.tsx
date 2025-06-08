@@ -151,11 +151,17 @@ export default function HomePage() {
         {/* Hero Section */}
         <section className="py-12 sm:py-20 text-center">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tight mb-4 sm:mb-6">
+            <h1
+              className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tight mb-4 sm:mb-6"
+              style={{ fontFamily: "Space Grotesk, system-ui, sans-serif" }}
+            >
               Learn Smarter with
               <span className="text-primary block">YouTube Playlists</span>
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed responsive-text">
+            <p
+              className="text-lg sm:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed responsive-text"
+              style={{ fontFamily: "Space Grotesk, system-ui, sans-serif" }}
+            >
               Transform any YouTube playlist into a structured learning experience. Track progress, take notes, and stay
               focused without distractions.
             </p>

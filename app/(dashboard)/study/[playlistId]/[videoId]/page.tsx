@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { YouTubePlayer } from "@/components/youtube-player"
+import { useToast } from "@/hooks/use-toast"
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/components/auth-provider"
 import { DatabaseService } from "@/lib/database"
 import type { Course, Video, UserProgress } from "@/lib/supabase"
+import { NotesModal } from "@/components/notes-modal"
 
 interface VideoWithProgress extends Video {
   completed: boolean
@@ -36,11 +37,14 @@ export default function StudyPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
+  const { toast } = useToast()
   const [course, setCourse] = useState<Course | null>(null)
   const [videos, setVideos] = useState<VideoWithProgress[]>([])
   const [currentVideo, setCurrentVideo] = useState<VideoWithProgress | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [notes, setNotes] = useState("")
+  const [originalNotes, setOriginalNotes] = useState("")
+  const [isSavingNotes, setIsSavingNotes] = useState(false)
   const [showCertificate, setShowCertificate] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
@@ -131,12 +135,19 @@ export default function StudyPage() {
       if (videoIndex !== -1) {
         setCurrentIndex(videoIndex)
         setCurrentVideo(videosWithProgress[videoIndex])
-        setNotes(videosWithProgress[videoIndex].notes || "")
+        const videoNotes = videosWithProgress[videoIndex].notes || ""
+        setNotes(videoNotes)
+        setOriginalNotes(videoNotes)
         setAutoCompleted(false)
         setVideoProgress(0)
       }
     } catch (error) {
       console.error("Error loading study data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load study data. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -146,19 +157,40 @@ export default function StudyPage() {
     if (!user || !currentVideo) return
 
     try {
+      console.log("Updating video progress:", { user_id: user.id, video_id: currentVideo.video_id, ...updates })
+
       await DatabaseService.updateProgress({
         user_id: user.id,
         video_id: currentVideo.video_id,
         ...updates,
       })
 
-      // Update local state
+      // Update local state immediately for real-time UI updates
       const updatedVideos = [...videos]
       updatedVideos[currentIndex] = { ...currentVideo, ...updates }
       setVideos(updatedVideos)
       setCurrentVideo({ ...currentVideo, ...updates })
+
+      // Dispatch events to notify other components with a small delay to ensure DB update is complete
+      setTimeout(() => {
+        if (updates.bookmarked !== undefined) {
+          console.log("Dispatching bookmarksUpdated event")
+          window.dispatchEvent(new CustomEvent("bookmarksUpdated"))
+        }
+        if (updates.notes !== undefined) {
+          console.log("Dispatching notesUpdated event")
+          window.dispatchEvent(new CustomEvent("notesUpdated"))
+        }
+      }, 100)
+
+      console.log("Video progress updated successfully")
     } catch (error) {
       console.error("Error updating progress:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update progress. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -173,13 +205,22 @@ export default function StudyPage() {
 
     // Update streak
     const today = new Date().toISOString().split("T")[0]
-    await DatabaseService.updateStreakActivity(user.id, today)
+    try {
+      await DatabaseService.updateStreakActivity(user.id, today)
+    } catch (error) {
+      console.error("Error updating streak:", error)
+    }
 
     // Check if course is completed
     const completedCount = videos.filter((v) => v.completed || v.video_id === currentVideo.video_id).length
     if (completedCount === videos.length) {
       setShowCertificate(true)
     }
+
+    toast({
+      title: "Video Completed! 🎉",
+      description: "Great job! Keep up the learning momentum.",
+    })
   }
 
   const handleVideoProgress = useCallback((progress: number) => {
@@ -197,26 +238,67 @@ export default function StudyPage() {
 
     const newBookmarkState = !currentVideo.bookmarked
     await updateVideoProgress({ bookmarked: newBookmarkState })
-  }
 
-  const saveNotes = async () => {
-    if (!currentVideo) return
-
-    await updateVideoProgress({ notes })
+    toast({
+      title: newBookmarkState ? "Bookmarked! 📖" : "Bookmark Removed",
+      description: newBookmarkState ? "Video saved to your bookmarks." : "Video removed from bookmarks.",
+    })
   }
 
   const navigateVideo = (direction: "prev" | "next") => {
     const newIndex = direction === "prev" ? currentIndex - 1 : currentIndex + 1
     if (newIndex >= 0 && newIndex < videos.length) {
       const newVideo = videos[newIndex]
-      router.push(`/study/${course!.id}/${newVideo.video_id}`)
+
+      // Update URL without full page reload
+      const newUrl = `/study/${course!.id}/${newVideo.video_id}`
+      window.history.pushState({}, "", newUrl)
+
+      // Update state to render new video
+      setCurrentIndex(newIndex)
+      setCurrentVideo(newVideo)
+      const videoNotes = newVideo.notes || ""
+      setNotes(videoNotes)
+      setOriginalNotes(videoNotes)
+      setAutoCompleted(false)
+      setVideoProgress(0)
     }
   }
 
   const jumpToVideo = (videoId: string) => {
-    router.push(`/study/${course!.id}/${videoId}`)
-    setShowMobileMenu(false)
+    const videoIndex = videos.findIndex((v) => v.video_id === videoId)
+    if (videoIndex !== -1) {
+      const newVideo = videos[videoIndex]
+
+      // Update URL without full page reload
+      const newUrl = `/study/${course!.id}/${newVideo.video_id}`
+      window.history.pushState({}, "", newUrl)
+
+      // Update state to render new video
+      setCurrentIndex(videoIndex)
+      setCurrentVideo(newVideo)
+      const videoNotes = newVideo.notes || ""
+      setNotes(videoNotes)
+      setOriginalNotes(videoNotes)
+      setAutoCompleted(false)
+      setVideoProgress(0)
+      setShowMobileMenu(false)
+    }
   }
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      // Reload the page when user uses browser navigation
+      window.location.reload()
+    }
+
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
+
+  // Check if notes have been modified
+  const hasUnsavedChanges = notes.trim() !== originalNotes.trim()
 
   if (loading) {
     return (
@@ -425,21 +507,31 @@ export default function StudyPage() {
               </Button>
             </div>
 
-            {/* Notes Section - Enhanced */}
-            <div className="space-y-3 pt-2 border-t">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <h3 className="font-medium text-sm enhanced-heading">Notes</h3>
-              </div>
-              <Textarea
-                placeholder="Add your notes for this video..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[80px] text-sm resize-none enhanced-input"
+            {/* Notes Button - Enhanced */}
+            <div className="p-4 border-t">
+              <NotesModal
+                notes={notes}
+                onSave={async (newNotes) => {
+                  setNotes(newNotes)
+                  await updateVideoProgress({ notes: newNotes })
+                  setOriginalNotes(newNotes)
+
+                  // Dispatch event to notify other components
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("notesUpdated"))
+                  }, 100)
+                }}
+                isSaving={isSavingNotes}
+                hasUnsavedChanges={hasUnsavedChanges}
+                videoTitle={currentVideo.title}
+                trigger={
+                  <Button variant="outline" className="w-full h-12 enhanced-button">
+                    <FileText className="h-4 w-4 mr-2" />
+                    {notes.trim() ? "Edit Notes" : "Add Note"}
+                    {hasUnsavedChanges && <div className="w-2 h-2 bg-orange-500 rounded-full ml-2" />}
+                  </Button>
+                }
               />
-              <Button onClick={saveNotes} variant="outline" className="w-full h-10 text-sm enhanced-button">
-                Save Notes
-              </Button>
             </div>
           </div>
         </div>
@@ -632,19 +724,49 @@ export default function StudyPage() {
 
         {/* Notes Section - Enhanced */}
         <div className="p-4 border-t">
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="h-4 w-4" />
-            <h3 className="font-medium enhanced-heading">Notes</h3>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <h3 className="font-medium enhanced-heading">Notes</h3>
+            </div>
+            {hasUnsavedChanges && (
+              <span className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                Unsaved
+              </span>
+            )}
           </div>
-          <Textarea
-            placeholder="Add your notes for this video..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="mb-3 min-h-[100px] enhanced-input"
+
+          <NotesModal
+            notes={notes}
+            onSave={async (newNotes) => {
+              setNotes(newNotes)
+              await updateVideoProgress({ notes: newNotes })
+              setOriginalNotes(newNotes)
+
+              // Dispatch event to notify other components
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent("notesUpdated"))
+              }, 100)
+            }}
+            isSaving={isSavingNotes}
+            hasUnsavedChanges={hasUnsavedChanges}
+            videoTitle={currentVideo.title}
+            trigger={
+              <Button variant="outline" className="w-full enhanced-button">
+                <FileText className="h-4 w-4 mr-2" />
+                {notes.trim() ? "Edit Notes" : "Add Note"}
+                {hasUnsavedChanges && <div className="w-2 h-2 bg-orange-500 rounded-full ml-2" />}
+              </Button>
+            }
           />
-          <Button onClick={saveNotes} size="sm" className="w-full enhanced-button">
-            Save Notes
-          </Button>
+
+          {notes.trim() && (
+            <div className="mt-3 p-3 bg-muted/30 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+              <div className="text-sm line-clamp-3 enhanced-text">{notes}</div>
+            </div>
+          )}
         </div>
       </div>
 

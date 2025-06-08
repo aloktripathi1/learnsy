@@ -37,13 +37,14 @@ export default function NotesPage() {
   const [editingNote, setEditingNote] = useState<string | null>(null)
   const [editContent, setEditContent] = useState("")
   const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
   const router = useRouter()
 
   useEffect(() => {
     if (user) {
       loadNotes()
     }
-  }, [user])
+  }, [user, refreshKey])
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -59,13 +60,36 @@ export default function NotesPage() {
     }
   }, [searchQuery, notes])
 
+  // Listen for notes updates from other components
+  useEffect(() => {
+    const handleNotesUpdate = () => {
+      console.log("Notes update event received, refreshing...")
+      setRefreshKey((prev) => prev + 1)
+    }
+
+    window.addEventListener("notesUpdated", handleNotesUpdate)
+    return () => window.removeEventListener("notesUpdated", handleNotesUpdate)
+  }, [])
+
   const loadNotes = async () => {
     if (!user) return
 
     try {
+      console.log("Loading notes for user:", user.id)
       const notesData = await DatabaseService.getNotes(user.id)
-      setNotes(notesData)
-      setFilteredNotes(notesData)
+      console.log("Raw notes data:", notesData)
+
+      // Filter and map the data to ensure we have valid notes
+      const validNotes = notesData
+        .filter((note) => note.notes && note.notes.trim() !== "" && note.videos)
+        .map((note) => ({
+          ...note,
+          videos: Array.isArray(note.videos) ? note.videos[0] : note.videos,
+        }))
+
+      console.log("Valid notes after processing:", validNotes)
+      setNotes(validNotes)
+      setFilteredNotes(validNotes)
     } catch (error) {
       console.error("Error loading notes:", error)
     } finally {
@@ -93,9 +117,13 @@ export default function NotesPage() {
         notes: editContent,
       })
 
+      // Refresh the notes list
       await loadNotes()
       setEditingNote(null)
       setEditContent("")
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent("notesUpdated"))
     } catch (error) {
       console.error("Error saving note:", error)
     }
@@ -111,7 +139,11 @@ export default function NotesPage() {
         notes: "",
       })
 
+      // Refresh the notes list
       await loadNotes()
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent("notesUpdated"))
     } catch (error) {
       console.error("Error deleting note:", error)
     }
@@ -133,7 +165,13 @@ export default function NotesPage() {
 
   const groupedNotes = filteredNotes.reduce(
     (acc, note) => {
-      const courseTitle = note.videos.courses.title
+      // Ensure we have valid video and course data
+      if (!note.videos || !note.videos.courses) {
+        console.warn("Note missing video or course data:", note)
+        return acc
+      }
+
+      const courseTitle = note.videos.courses.title || "Unknown Course"
       if (!acc[courseTitle]) {
         acc[courseTitle] = []
       }

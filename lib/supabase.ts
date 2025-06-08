@@ -4,21 +4,31 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseUrl) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable")
-}
+// Create a conditional client that only initializes if env vars are present
+export const supabase = (() => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn("Supabase environment variables not configured")
+    return null
+  }
 
-if (!supabaseAnonKey) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable")
-}
+  try {
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      },
+    })
+  } catch (error) {
+    console.error("Failed to create Supabase client:", error)
+    return null
+  }
+})()
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-  },
-})
+// Helper function to check if Supabase is configured
+export const isSupabaseConfigured = () => {
+  return !!(supabaseUrl && supabaseAnonKey && supabase)
+}
 
 // Database types
 export interface Course {
@@ -60,4 +70,13 @@ export interface StreakActivity {
   date: string
   videos_watched: number
   created_at: string
+}
+
+export interface VideoTimestamp {
+  id: string
+  user_id: string
+  video_id: string
+  timestamp: number
+  duration: number
+  updated_at: string
 }

@@ -30,7 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Dynamically import supabase only if configured
     import("@/lib/supabase")
-      .then(({ supabase }) => {
+      .then(({ supabase, isSupabaseConfigured }) => {
+        if (!isSupabaseConfigured() || !supabase) {
+          setError("Supabase client initialization failed")
+          setLoading(false)
+          return
+        }
+
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
           setUser(session?.user ?? null)
@@ -59,7 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Authentication not available")
     }
 
-    const { supabase } = await import("@/lib/supabase")
+    const { supabase, isSupabaseConfigured } = await import("@/lib/supabase")
+
+    if (!isSupabaseConfigured() || !supabase) {
+      throw new Error("Authentication not configured")
+    }
+
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -76,7 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     if (error) return
 
-    const { supabase } = await import("@/lib/supabase")
+    const { supabase, isSupabaseConfigured } = await import("@/lib/supabase")
+
+    if (!isSupabaseConfigured() || !supabase) {
+      return
+    }
+
     const { error: signOutError } = await supabase.auth.signOut()
     if (signOutError) throw signOutError
   }

@@ -34,13 +34,14 @@ export default function BookmarksPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredBookmarks, setFilteredBookmarks] = useState<BookmarkItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
   const router = useRouter()
 
   useEffect(() => {
     if (user) {
       loadBookmarks()
     }
-  }, [user])
+  }, [user, refreshKey])
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -55,13 +56,36 @@ export default function BookmarksPage() {
     }
   }, [searchQuery, bookmarks])
 
+  // Listen for bookmark updates from other components
+  useEffect(() => {
+    const handleBookmarksUpdate = () => {
+      console.log("Bookmarks update event received, refreshing...")
+      setRefreshKey((prev) => prev + 1)
+    }
+
+    window.addEventListener("bookmarksUpdated", handleBookmarksUpdate)
+    return () => window.removeEventListener("bookmarksUpdated", handleBookmarksUpdate)
+  }, [])
+
   const loadBookmarks = async () => {
     if (!user) return
 
     try {
+      console.log("Loading bookmarks for user:", user.id)
       const bookmarksData = await DatabaseService.getBookmarks(user.id)
-      setBookmarks(bookmarksData)
-      setFilteredBookmarks(bookmarksData)
+      console.log("Raw bookmarks data:", bookmarksData)
+
+      // Filter and map the data to ensure we have valid bookmarks
+      const validBookmarks = bookmarksData
+        .filter((bookmark) => bookmark.bookmarked === true && bookmark.videos)
+        .map((bookmark) => ({
+          ...bookmark,
+          videos: Array.isArray(bookmark.videos) ? bookmark.videos[0] : bookmark.videos,
+        }))
+
+      console.log("Valid bookmarks after processing:", validBookmarks)
+      setBookmarks(validBookmarks)
+      setFilteredBookmarks(validBookmarks)
     } catch (error) {
       console.error("Error loading bookmarks:", error)
     } finally {
@@ -79,7 +103,11 @@ export default function BookmarksPage() {
         bookmarked: false,
       })
 
+      // Refresh the bookmarks list
       await loadBookmarks()
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent("bookmarksUpdated"))
     } catch (error) {
       console.error("Error removing bookmark:", error)
     }
@@ -101,7 +129,13 @@ export default function BookmarksPage() {
 
   const groupedBookmarks = filteredBookmarks.reduce(
     (acc, bookmark) => {
-      const courseTitle = bookmark.videos.courses.title
+      // Ensure we have valid video and course data
+      if (!bookmark.videos || !bookmark.videos.courses) {
+        console.warn("Bookmark missing video or course data:", bookmark)
+        return acc
+      }
+
+      const courseTitle = bookmark.videos.courses.title || "Unknown Course"
       if (!acc[courseTitle]) {
         acc[courseTitle] = []
       }

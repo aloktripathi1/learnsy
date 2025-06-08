@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://learnsy.vercel.app/sitemap.xml
+
+# Allow favicon and manifest files
+Allow: /favicon.png
+Allow: /site.webmanifest
+Allow: /browserconfig.xml

@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import { BookOpen, Bookmark, Home, StickyNote, Play, Moon, Sun, LogOut, User, Menu, X } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useAuth } from "@/components/auth-provider"
+import { useState, useEffect } from "react"
 
 import {
   Sidebar,
@@ -44,11 +45,13 @@ const navigation = [
     title: "Bookmarks",
     url: "/bookmarks",
     icon: Bookmark,
+    count: 0,
   },
   {
     title: "Notes",
     url: "/notes",
     icon: StickyNote,
+    count: 0,
   },
 ]
 
@@ -58,12 +61,85 @@ export function AppSidebar() {
   const { user, signOut } = useAuth()
   const { state, toggleSidebar } = useSidebar()
 
+  const [notesCount, setNotesCount] = useState(0)
+  const [bookmarksCount, setBookmarksCount] = useState(0)
+
+  useEffect(() => {
+    if (user) {
+      loadCounts()
+    }
+  }, [user])
+
+  useEffect(() => {
+    const handleNotesUpdate = () => {
+      console.log("Notes updated, refreshing sidebar counts")
+      loadCounts()
+    }
+
+    const handleBookmarksUpdate = () => {
+      console.log("Bookmarks updated, refreshing sidebar counts")
+      loadCounts()
+    }
+
+    const handleProgressUpdate = () => {
+      console.log("Progress updated, refreshing sidebar counts")
+      loadCounts()
+    }
+
+    window.addEventListener("notesUpdated", handleNotesUpdate)
+    window.addEventListener("bookmarksUpdated", handleBookmarksUpdate)
+    window.addEventListener("progressUpdated", handleProgressUpdate)
+
+    return () => {
+      window.removeEventListener("notesUpdated", handleNotesUpdate)
+      window.removeEventListener("bookmarksUpdated", handleBookmarksUpdate)
+      window.removeEventListener("progressUpdated", handleProgressUpdate)
+    }
+  }, [])
+
+  const loadCounts = async () => {
+    if (!user) return
+
+    try {
+      const { DatabaseService } = await import("@/lib/database")
+      const [notes, bookmarks] = await Promise.all([
+        DatabaseService.getNotes(user.id),
+        DatabaseService.getBookmarks(user.id),
+      ])
+
+      // Filter to ensure we only count valid notes and bookmarks
+      const validNotes = notes.filter(
+        (note) => note.notes && note.notes.trim() !== "" && note.videos && note.videos.courses,
+      )
+
+      const validBookmarks = bookmarks.filter(
+        (bookmark) => bookmark.bookmarked === true && bookmark.videos && bookmark.videos.courses,
+      )
+
+      console.log("Sidebar counts updated:", { notes: validNotes.length, bookmarks: validBookmarks.length })
+      setNotesCount(validNotes.length)
+      setBookmarksCount(validBookmarks.length)
+    } catch (error) {
+      console.error("Error loading sidebar counts:", error)
+    }
+  }
+
   const handleLogout = async () => {
     await signOut()
     window.location.href = "/"
   }
 
   const isCollapsed = state === "collapsed"
+
+  const updatedNavigation = navigation.map((item) => {
+    if (item.title === "Bookmarks") {
+      return { ...item, count: bookmarksCount }
+    }
+    if (item.title === "Notes") {
+      return { ...item, count: notesCount }
+    }
+    return item
+  })
 
   return (
     <Sidebar collapsible="icon" className="sidebar-transition hidden md:flex">
@@ -97,7 +173,7 @@ export function AppSidebar() {
           {!isCollapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item) => (
+              {updatedNavigation.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -106,7 +182,16 @@ export function AppSidebar() {
                   >
                     <Link href={item.url}>
                       <item.icon className="size-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      {!isCollapsed && (
+                        <div className="flex items-center justify-between w-full">
+                          <span>{item.title}</span>
+                          {item.count !== undefined && item.count > 0 && (
+                            <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                              {item.count}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

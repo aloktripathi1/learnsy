@@ -1,9 +1,0 @@
--- Step 8: Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_courses_user_id ON courses(user_id);
-CREATE INDEX IF NOT EXISTS idx_courses_playlist_id ON courses(playlist_id);
-CREATE INDEX IF NOT EXISTS idx_videos_course_id ON videos(course_id);
-CREATE INDEX IF NOT EXISTS idx_videos_video_id ON videos(video_id);
-CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON user_progress(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_progress_video_id ON user_progress(video_id);
-CREATE INDEX IF NOT EXISTS idx_streak_activity_user_id ON streak_activity(user_id);
-CREATE INDEX IF NOT EXISTS idx_streak_activity_date ON streak_activity(date);
