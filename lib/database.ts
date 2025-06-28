@@ -295,7 +295,7 @@ export class DatabaseService {
     return validNotes
   }
 
-  // Video Timestamps
+  // Video Timestamps - NEW METHODS FOR RESUME FEATURE
   static async getVideoTimestamp(userId: string, videoId: string): Promise<VideoTimestamp | null> {
     const client = this.checkSupabase()
     console.log("Getting video timestamp for user:", userId, "video:", videoId)
