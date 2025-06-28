@@ -4,10 +4,25 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Create a conditional client that only initializes if env vars are present
+// Helper function to validate URL format
+const isValidUrl = (url: string): boolean => {
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Create a conditional client that only initializes if env vars are present and valid
 export const supabase = (() => {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("Supabase environment variables not configured")
+  // Check if environment variables exist and are not placeholder values
+  if (!supabaseUrl || 
+      !supabaseAnonKey || 
+      supabaseUrl === 'your_supabase_project_url_here' ||
+      supabaseAnonKey === 'your_supabase_anon_key_here' ||
+      !isValidUrl(supabaseUrl)) {
+    console.warn("Supabase environment variables not configured properly. Please update your .env.local file with valid Supabase credentials.")
     return null
   }
 
@@ -27,7 +42,12 @@ export const supabase = (() => {
 
 // Helper function to check if Supabase is configured
 export const isSupabaseConfigured = () => {
-  return !!(supabaseUrl && supabaseAnonKey && supabase)
+  return !!(supabaseUrl && 
+           supabaseAnonKey && 
+           supabase &&
+           supabaseUrl !== 'your_supabase_project_url_here' &&
+           supabaseAnonKey !== 'your_supabase_anon_key_here' &&
+           isValidUrl(supabaseUrl))
 }
 
 // Database types
