@@ -8,10 +8,15 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const isValidUrl = (url: string): boolean => {
   try {
     new URL(url)
-    return true
+    return url.startsWith('https://') && url.includes('.supabase.co')
   } catch {
     return false
   }
+}
+
+// Helper function to validate JWT format
+const isValidJWT = (token: string): boolean => {
+  return token.startsWith('eyJ') && token.split('.').length === 3
 }
 
 // Create a conditional client that only initializes if env vars are present and valid
@@ -20,13 +25,25 @@ export const supabase = (() => {
   if (!supabaseUrl || 
       !supabaseAnonKey || 
       supabaseUrl === 'your_supabase_project_url_here' ||
-      supabaseAnonKey === 'your_supabase_anon_key_here' ||
-      !isValidUrl(supabaseUrl)) {
+      supabaseAnonKey === 'your_supabase_anon_key_here') {
     console.warn("Supabase environment variables not configured properly. Please update your .env.local file with valid Supabase credentials.")
     return null
   }
 
+  // Validate URL format
+  if (!isValidUrl(supabaseUrl)) {
+    console.error("Invalid Supabase URL format. URL should start with 'https://' and contain '.supabase.co'")
+    return null
+  }
+
+  // Validate JWT format
+  if (!isValidJWT(supabaseAnonKey)) {
+    console.error("Invalid Supabase anon key format. Key should start with 'eyJ' and be a valid JWT token")
+    return null
+  }
+
   try {
+    console.log("✅ Supabase client initialized successfully")
     return createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
@@ -47,7 +64,8 @@ export const isSupabaseConfigured = () => {
            supabase &&
            supabaseUrl !== 'your_supabase_project_url_here' &&
            supabaseAnonKey !== 'your_supabase_anon_key_here' &&
-           isValidUrl(supabaseUrl))
+           isValidUrl(supabaseUrl) &&
+           isValidJWT(supabaseAnonKey))
 }
 
 // Database types

@@ -28,18 +28,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    // Check for placeholder values
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url_here' ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === 'your_supabase_anon_key_here') {
+      setError("Please update your .env.local file with real Supabase credentials.")
+      setLoading(false)
+      return
+    }
+
     // Dynamically import supabase only if configured
     import("@/lib/supabase")
       .then(({ supabase, isSupabaseConfigured }) => {
         if (!isSupabaseConfigured() || !supabase) {
-          setError("Supabase client initialization failed")
+          setError("Supabase client initialization failed. Please check your credentials.")
           setLoading(false)
           return
         }
 
+        console.log("🔗 Supabase connection established")
+
         // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          setUser(session?.user ?? null)
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+          if (error) {
+            console.error("Error getting session:", error)
+            setError(`Authentication error: ${error.message}`)
+          } else {
+            setUser(session?.user ?? null)
+            console.log("👤 User session:", session?.user ? "Authenticated" : "Not authenticated")
+          }
           setLoading(false)
         })
 
@@ -47,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("🔄 Auth state changed:", event)
           setUser(session?.user ?? null)
           setLoading(false)
         })
