@@ -8,6 +8,14 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: ['i.ytimg.com', 'img.youtube.com'],
+  },
+  // Ensure static export for Netlify
+  output: 'export',
+  trailingSlash: true,
+  // Disable server-side features for static export
+  experimental: {
+    appDir: true,
   },
 }
 
