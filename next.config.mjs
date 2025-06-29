@@ -1,3 +1,5 @@
+import webpack from 'webpack';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -18,6 +20,13 @@ const nextConfig = {
     if (!isServer) {
       config.externals = config.externals || [];
       config.externals.push('ws');
+      
+      // Ignore the ws module to prevent the critical dependency warning
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^ws$/,
+        })
+      );
     }
     return config;
   },
